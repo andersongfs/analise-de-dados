@@ -1,0 +1,149 @@
+---
+title: "T1CP4"
+author: "Anderson Gustafson"
+date: "18 de julho de 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(dplyr, warn.conflicts = FALSE)
+library(ggplot2)
+source('leitor.R')
+theme_set(theme_bw())
+```
+## Dados 
+
+Os dados que são a base da análise descrevem os gastos realizados pelos deputados brasileiros no ano de 2016. 
+Estes dados são abertos e disponibilizados pela própria câmara legislativa e podem ser encontrados neste link: 
+http://www2.camara.leg.br/transparencia/cota-para-exercicio-da-atividade-parlamentar/dados-abertos-cota-parlamentar
+Para conhecer o que está descrito no conjunto de dados, basta acessar este outro link:
+http://www2.camara.leg.br/transparencia/cota-para-exercicio-da-atividade-parlamentar/dados-abertos-cota-parlamentar
+```{r}
+dados = ler_gastos()
+
+str(dados)
+```
+
+## Número de deputados por partido
+Antes de tudo é bom termos algumas informações, como a quantidade de deputados por partido, para conhecer os maiores/menores partidos do país.
+```{r ECHO=FALSE}
+  
+qtdPorPartido = dados %>% 
+  select(txNomeParlamentar, sgPartido) %>% 
+  distinct() %>%
+  group_by(sgPartido) %>%
+  summarise(deputadosPorPartido = n()) 
+  
+ggplot(qtdPorPartido, mapping = aes(x = reorder(sgPartido, -deputadosPorPartido), y= deputadosPorPartido)) + 
+  geom_bar(stat="identity") + 
+  labs(x="Partido", y="Quantidade de deputados") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+## Número de deputados por estado
+Outra informação básica que nem sempre sabemos é a quantidade de deputados que temos em nosso estado. Sendo assim, abaixo encontramos um gráfico representando a quantidade de deputados por estado.
+```{r}
+qtdPorEstado = dados %>%
+  select(txNomeParlamentar, sgUF) %>%
+  distinct() %>% 
+  group_by(sgUF)%>%
+  summarise(depPorEstado = n())
+
+ggplot(qtdPorEstado) +
+  geom_bar(stat="identity", mapping = aes(x = reorder(sgUF, -depPorEstado),
+                         y = depPorEstado)) + 
+    labs(x='Estado', y='Número de deputados')
+
+```
+
+
+## Tipos possíveis de gastos
+Nossos deputados dipõem de uma cota de valor para gastos próprios durante seu mandato. Estes são os possíveis tipos de gastos que cada um pode atribuir às suas despesas.
+```{r}
+tipoDeGastos = dados%>%
+  select(txtDescricao, numSubCota)%>%
+  unique()
+  colnames(tipoDeGastos) = c("Despesa", "ID")
+  print(tipoDeGastos %>% select(ID, Despesa))
+
+```
+
+## Ordenando os gastos por tipo
+Visto o leque de opções para atribuir gastos de dinheiro, quais serão as classes de despesas em que mais se tem valor atribuído?
+```{r}
+gastosPorTipo = dados %>%
+  select(numSubCota, vlrLiquido) %>%
+  group_by(numSubCota) %>%
+  summarise(vlrLiq = sum(vlrLiquido))
+
+ggplot(gastosPorTipo) +
+  geom_bar(stat="identity", mapping = aes(x = reorder(numSubCota, -vlrLiq),
+                         y = vlrLiq)) + 
+    labs(x='ID da despesa', y='Valor gasto')
+```
+
+## Gastos que tem valores mais desiguais
+Já este gráfico mostra as classes ou tipos de gastos que tem maior disparidade entre os valores atribuídos.
+Se destacam, com grande diferença quando comparado aos demais gastos, em primeiro lugar DIVULGAÇÃO DA ATIVIDADE PARLAMENTAR, em segundo lugar CONSULTORIAS, PESQUISAS E TRABALHOS TÉCNICOS e em terceiro lugar LOCAÇÃO OU FRETAMENTO DE AERONAVES.
+```{r}
+desvioPadraoDosGastos = dados %>%
+  select(numSubCota, vlrLiquido) %>%
+  group_by(numSubCota) %>%
+  summarise(desvio = sd(vlrLiquido))
+
+ggplot(desvioPadraoDosGastos) +
+  geom_bar(stat="identity", mapping = aes(x = reorder(numSubCota, -desvio),
+                         y = desvio)) + 
+    labs(x='ID da despesa', y='Variação')
+
+```
+
+## Qual deputado paraibano que mais gastou?
+Não mais importante que todo o resto, apenas mais próximo de nós, quem dos nossos representantes tem os gastos mais elevados? Este gráfico indica o valor gasto por cada representante paraibano.
+```{r}
+gastosPorParlamentarPB = dados %>%
+  select(txNomeParlamentar, vlrLiquido, sgUF) %>%
+  filter(sgUF == "PB") %>%
+  group_by(txNomeParlamentar) %>%
+  summarise(vlrLiq = sum(vlrLiquido))
+
+ggplot(gastosPorParlamentarPB) +
+  geom_bar(stat="identity", mapping = aes(x = reorder(txNomeParlamentar, -vlrLiq),
+                         y = vlrLiq)) + 
+    labs(x='Nome do deputado paraibano', y='Valor gasto') +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+## Será que estados com menor número de deputados gastam mais que estados com maior quantidade de deputados?
+
+```{r}
+gastosPorEstado = dados %>%
+  select(sgUF, vlrLiquido) %>%
+  group_by(sgUF) %>%
+  summarise(vlrLiq = sum(vlrLiquido))
+
+temp = merge(qtdPorEstado, gastosPorEstado)
+ggplot(temp) +
+  geom_bar(stat="identity", mapping = aes(x = reorder(temp$sgUF, -temp$depPorEstado),
+                         y = temp$vlrLiq/1000000)) + 
+    labs(x='Estados ordenados pela sua quantidade de deputados', y='Valor gasto em milhões de reais') +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+#ggplot(temp, aes(x = temp$sgUF, y = temp$vlrLiq/1000000, colour = temp$depPorEstado)) + geom_point()
+```
+
+```{r}
+empresas.beneficiadas = dados %>%
+  select(txNomeParlamentar, numSubCota, txtFornecedor, vlrLiquido) %>%
+  group_by(txNomeParlamentar, txtFornecedor) %>%
+  filter(numSubCota == 1, txtFornecedor == ".CASA DOS SÍNDICOS SE LTDA") %>%
+  summarise(valor = sum(vlrLiquido), qtdDeVezes = n())
+
+
+head(empresas.beneficiadas)
+
+
+```
