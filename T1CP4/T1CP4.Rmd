@@ -135,6 +135,77 @@ ggplot(temp) +
 #ggplot(temp, aes(x = temp$sgUF, y = temp$vlrLiq/1000000, colour = temp$depPorEstado)) + geom_point()
 ```
 
+
+## Analisando a quantidade de gastos da PB em Janeiro
+```{r}
+gastos_pb_janeiro = dados %>%
+  filter(numMes == 1, sgUF == "PB") %>%
+  group_by(txNomeParlamentar) %>%
+  summarise(gasto = sum(vlrLiquido))
+
+
+ggplot(gastos_pb_janeiro, aes(x = reorder(txNomeParlamentar, -gasto), y = gasto)) +
+  geom_bar(stat="identity") + 
+  geom_text(aes(label=gasto), vjust=1.5, color='white') +
+  labs(x='Mês', y='Valor gasto') +
+  theme(axis.text.x = element_text(angle=60, hjust = 1))
+```
+
+## Analisando a quantidade de gastos da Piauí em Janeiro
+```{r}
+gastos_pb_janeiro = dados %>%
+  filter(numMes == 1, sgUF == "PI") %>%
+  group_by(txNomeParlamentar) %>%
+  summarise(gasto = sum(vlrLiquido))
+
+
+ggplot(gastos_pb_janeiro, aes(x = reorder(txNomeParlamentar, -gasto), y = gasto)) +
+  geom_bar(stat="identity") + 
+  geom_text(aes(label=gasto), vjust=1.5, color='white') +
+  labs(x='Mês', y='Valor gasto') +
+  theme(axis.text.x = element_text(angle=60, hjust = 1))
+```
+
+## Distribuição dos gastos da Paraíba por mês, de Janeiro a Maio
+```{r}
+gastos_por_mes_pb = dados %>%
+  filter(sgUF == "PB", numMes < 6) %>%
+  group_by(numMes, txNomeParlamentar) %>%
+  summarise(gasto = sum(vlrLiquido)/1000)
+
+ggplot(gastos_por_mes_pb, aes(factor(numMes), gasto) ) +
+  geom_boxplot() +
+  geom_jitter()
+```
+
+## Distribuição dos gastos da Piauí por mês, de Janeiro a Maio
+```{r}
+gastos_por_mes_pi = dados %>%
+  filter(sgUF == "PI", numMes < 6) %>%
+  group_by(numMes, txNomeParlamentar) %>%
+  summarise(gasto = sum(vlrLiquido)/1000)
+
+ggplot(gastos_por_mes_pi, aes(factor(numMes), gasto) ) +
+  geom_boxplot() +
+  geom_jitter()
+```
+
+## Analisando Rômulo Gouveia
+```{r}
+gastos_romulo = dados %>%
+  filter(txNomeParlamentar == "RÔMULO GOUVEIA", numMes < 6) %>%
+  group_by(numMes) %>%
+  summarise(gasto = sum(vlrLiquido))
+gastos_romulo
+
+ggplot(gastos_romulo, aes(x = numMes, y = gasto)) +
+  geom_bar(stat="identity") + 
+  geom_text(aes(label=gasto), vjust=1.5, color='white') +
+  labs(x='Mês', y='Valor gasto')
+```
+
+
+
 ```{r}
 empresas.beneficiadas = dados %>%
   select(txNomeParlamentar, numSubCota, txtFornecedor, vlrLiquido) %>%
