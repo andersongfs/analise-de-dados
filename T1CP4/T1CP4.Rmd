@@ -1,6 +1,6 @@
 ---
 title: "T1CP4"
-author: "Anderson Gustafson"
+author: "-"
 date: "18 de julho de 2016"
 output: html_document
 ---
@@ -102,24 +102,10 @@ ggplot(desvioPadraoDosGastos) +
 
 ```
 
-## Qual deputado paraibano que mais gastou?
-Não mais importante que todo o resto, apenas mais próximo de nós, quem dos nossos representantes tem os gastos mais elevados? Este gráfico indica o valor gasto por cada representante paraibano.
-```{r}
-gastosPorParlamentarPB = dados %>%
-  select(txNomeParlamentar, vlrLiquido, sgUF) %>%
-  filter(sgUF == "PB") %>%
-  group_by(txNomeParlamentar) %>%
-  summarise(vlrLiq = sum(vlrLiquido))
-
-ggplot(gastosPorParlamentarPB) +
-  geom_bar(stat="identity", mapping = aes(x = reorder(txNomeParlamentar, -vlrLiq),
-                         y = vlrLiq)) + 
-    labs(x='Nome do deputado paraibano', y='Valor gasto') +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
-```
 
 ## Será que estados com menor número de deputados gastam mais que estados com maior quantidade de deputados?
-
+Estando os estados ordenados por suas respectivas quantidade de deputados, notamos que alguns estados com menor quantidade de deputados(o qual deveria gastar menos, provavelmente) acabam gastando mais que estados com maior número de representação parlamentar.
+Um exemplo observado é a PB e o PI.
 ```{r}
 gastosPorEstado = dados %>%
   select(sgUF, vlrLiquido) %>%
@@ -135,8 +121,10 @@ ggplot(temp) +
 #ggplot(temp, aes(x = temp$sgUF, y = temp$vlrLiq/1000000, colour = temp$depPorEstado)) + geom_point()
 ```
 
+Vamos agora escolher o mês de Janeiro para observar as diferenças de gastos entre os deputados dos dois estados e logo depois ver a distribuição destes gastos em cada mês(de Janeiro a Maio).
 
 ## Analisando a quantidade de gastos da PB em Janeiro
+
 ```{r}
 gastos_pb_janeiro = dados %>%
   filter(numMes == 1, sgUF == "PB") %>%
@@ -171,14 +159,51 @@ ggplot(gastos_pb_janeiro, aes(x = reorder(txNomeParlamentar, -gasto), y = gasto)
 gastos_por_mes_pb = dados %>%
   filter(sgUF == "PB", numMes < 6) %>%
   group_by(numMes, txNomeParlamentar) %>%
-  summarise(gasto = sum(vlrLiquido)/1000)
+  summarise(gasto = sum(vlrLiquido))
 
+gastos_por_mes_pb = gastos_por_mes_pb[order(gastos_por_mes_pb$numMes, gastos_por_mes_pb$gasto, decreasing = T),]
+
+gastos_por_mes_pb_jan = gastos_por_mes_pb %>%
+  filter(numMes == 1)
+gastos_por_mes_pb_maio = gastos_por_mes_pb %>%
+  filter(numMes == 5)
+  
 ggplot(gastos_por_mes_pb, aes(factor(numMes), gasto) ) +
   geom_boxplot() +
   geom_jitter()
 ```
+## Summary dos meses de Janeiro e Maio para verificar outliers
+Com esses dados podemos ver que os valores máximo andam perto do dobro da mediana, valor mais próximo de quando comparado com todos os outros valores. Isso representa uma diferença significativa!
+```{r}
+summary(gastos_por_mes_pb_jan$gasto)
 
-## Distribuição dos gastos da Piauí por mês, de Janeiro a Maio
+summary(gastos_por_mes_pb_maio$gasto)
+```
+## Verificando outlier no mês de maio na PB(BENJAMIN MARANHÃO 68.29685)
+Esse gasto de Benjamin foi escolhido pelo fato de ter ultrapassado o dobro do valor da mediana.
+Dentre seus gastos, o mais significativo foi na categoria DIVULGAÇÃO DA ATIVIDADE PARLAMENTAR com a empresa GRÁFICA E EDITORA MANGUEIRA LTDA, na confecção de 59000(bastante ein!?) unidades de informativo.
+Segue link da nota: http://www.camara.gov.br/cota-parlamentar/documentos/publ/1545/2016/5984213.pdf
+```{r}
+benjamin_maio = dados %>%
+  filter(numMes == 5, nuCarteiraParlamentar == 131) #Número da carteira de BENJAMIN MARANHÃO
+select(benjamin_maio[order(benjamin_maio$vlrLiquido, decreasing = T),], txtDescricao, vlrLiquido)
+```
+
+## Analisando Rômulo Gouveia
+Rômulo atualmente é o deputado que mais gasta na PB, então vale a pena construir um gráfico mostrando seu montante de gastos por mês e quem sabe comparar com outros como Luiz Couto(um dos que menos gasta).
+```{r}
+gastos_romulo = dados %>%
+  filter(txNomeParlamentar == "RÔMULO GOUVEIA", numMes < 6) %>%
+  group_by(numMes) %>%
+  summarise(gasto = sum(vlrLiquido))
+summary(gastos_romulo)
+ggplot(gastos_romulo, aes(x = numMes, y = gasto)) +
+  geom_bar(stat="identity") + 
+  geom_text(aes(label=gasto), vjust=1.5, color='white') +
+  labs(x='Mês', y='Valor gasto')
+```
+
+## Distribuição dos gastos do Piauí por mês, de Janeiro a Maio
 ```{r}
 gastos_por_mes_pi = dados %>%
   filter(sgUF == "PI", numMes < 6) %>%
@@ -188,33 +213,50 @@ gastos_por_mes_pi = dados %>%
 ggplot(gastos_por_mes_pi, aes(factor(numMes), gasto) ) +
   geom_boxplot() +
   geom_jitter()
+summary(gastos_por_mes_pi)
 ```
 
-## Analisando Rômulo Gouveia
+O piauí consegue ter um gasto abaixo da PB pelo fato de possuir maior quantidade de representantes gastando muito pouco. Vemos mais pontos próximos do 0 na distribuição do Piauí do que no da Paraíba. Então cabe a nós analisarmos a atuação destes deputados, verificar se se é uma economia feita por cada um desses representantes ou se apenas estão de licensa ou afastados do mandato.
+É notório que os deputados gastam bastante dinheiro em DIVULGAÇÃO DE ATIVIDADE PARLAMENTAR E COMBUSTÍVEIS E LUBRIFICANTES. Será que isso reflete uma real necessidade ou uma facilidade para desvio de verba? Valores gastos em combustível chegam a somar 6 mil reais aqui na PB, o que forneceria 1500 litros de gasolina caso essa custasse R$ 4,00 o litro, o que daria 15000 KM de autonomia para um carro que gaste 10KM/L.
+
+## Os deputados da PB ultrapassam sua cota parlamentar?
+Tendo como base o valor encontrado no site da câmara que indica que a cota parlamentar da Paraíba é de PB 42.032,56, vamos ver qual deputado se encaixa nesse limite e qual acha que esse valor está pouco para custear seus gastos.
 ```{r}
-gastos_romulo = dados %>%
-  filter(txNomeParlamentar == "RÔMULO GOUVEIA", numMes < 6) %>%
-  group_by(numMes) %>%
+gastos_pb_janeiro = dados %>%
+  filter(numMes == 1, sgUF == "PB") %>%
+  group_by(txNomeParlamentar) %>%
   summarise(gasto = sum(vlrLiquido))
-gastos_romulo
 
-ggplot(gastos_romulo, aes(x = numMes, y = gasto)) +
+
+ggplot(gastos_pb_janeiro, aes(x = reorder(txNomeParlamentar, -gasto), y = gasto)) +
   geom_bar(stat="identity") + 
-  geom_text(aes(label=gasto), vjust=1.5, color='white') +
-  labs(x='Mês', y='Valor gasto')
+  geom_text(aes(label=gasto), vjust=1.5, color='white', size=2.5) +
+  labs(x='Mês', y='Valor gasto') +
+  theme(axis.text.x = element_text(angle=60, hjust = 1))
+
+gastos_pb_fev = dados %>%
+  filter(numMes == 2, sgUF == "PB") %>%
+  group_by(txNomeParlamentar) %>%
+  summarise(gasto = sum(vlrLiquido))
+
+
+ggplot(gastos_pb_fev, aes(x = reorder(txNomeParlamentar, -gasto), y = gasto)) +
+  geom_bar(stat="identity") + 
+  geom_text(aes(label=gasto), vjust=1.5, color='white', size=2.5) +
+  labs(x='Mês', y='Valor gasto') +
+  theme(axis.text.x = element_text(angle=60, hjust = 1))
+
+gastos_pb_mar = dados %>%
+  filter(numMes == 3, sgUF == "PB") %>%
+  group_by(txNomeParlamentar) %>%
+  summarise(gasto = sum(vlrLiquido))
+
+
+ggplot(gastos_pb_mar, aes(x = reorder(txNomeParlamentar, -gasto), y = gasto)) +
+  geom_bar(stat="identity") + 
+  geom_text(aes(label=gasto), vjust=1.5, color='white', size=2.5) +
+  labs(x='Mês', y='Valor gasto') +
+  theme(axis.text.x = element_text(angle=60, hjust = 1))
 ```
 
-
-
-```{r}
-empresas.beneficiadas = dados %>%
-  select(txNomeParlamentar, numSubCota, txtFornecedor, vlrLiquido) %>%
-  group_by(txNomeParlamentar, txtFornecedor) %>%
-  filter(numSubCota == 1, txtFornecedor == ".CASA DOS SÍNDICOS SE LTDA") %>%
-  summarise(valor = sum(vlrLiquido), qtdDeVezes = n())
-
-
-head(empresas.beneficiadas)
-
-
-```
+Observando os gráficos de Janeiro à Março é fácil ver que alguns não se encaixam dentro do limite da cota parlamentar para o nosso estado. De onde então sai o restante do dinheiro, do bolso de cada um deputado? Vamos estudar e encontrar essa resposta!
