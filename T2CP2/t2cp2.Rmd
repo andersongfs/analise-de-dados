@@ -1,0 +1,81 @@
+---
+title: "t2cp2"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(dplyr, warn.conflicts = FALSE)
+library(ggplot2)
+source('leitor.R')
+theme_set(theme_bw())
+```
+## Dados 
+
+Os dados que são a base da análise descrevem os gastos realizados pelos deputados brasileiros no ano de 2016. 
+Estes dados são abertos e disponibilizados pela própria câmara legislativa e podem ser encontrados neste link: 
+http://www2.camara.leg.br/transparencia/cota-para-exercicio-da-atividade-parlamentar/dados-abertos-cota-parlamentar
+Para conhecer o que está descrito no conjunto de dados, basta acessar este outro link:
+http://www2.camara.leg.br/transparencia/cota-para-exercicio-da-atividade-parlamentar/dados-abertos-cota-parlamentar
+```{r}
+dados = ler_gastos()
+
+str(dados)
+```
+
+
+## Número de deputados por estado
+Outra informação básica que nem sempre sabemos é a quantidade de deputados que temos em nosso estado. Sendo assim, abaixo encontramos um gráfico representando a quantidade de deputados por estado.
+```{r}
+qtdPorEstado = dados %>%
+  select(txNomeParlamentar, sgUF) %>%
+  distinct() %>% 
+  group_by(sgUF)%>%
+  summarise(depPorEstado = n())
+
+
+```
+
+## Total de gastos de deputados por estado
+
+```{r}
+gastosPorEstado = dados %>%
+  select(vlrLiquido, sgUF) %>% 
+  group_by(sgUF)%>%
+  summarise(gastoEstado = sum(vlrLiquido))
+
+x = merge(qtdPorEstado, gastosPorEstado)
+
+nordeste = c("MA", "PI", "CE","RN", "SE", "BA", "PB", "PE", "AL")
+norte = c("AM", "RR", "AP","PA", "TO", "RO", "AC")
+centroeste = c("DF", "MT", "MS", "GO")
+sudeste = c("SP", "RJ", "ES","MG")
+sul = c("PR", "RS", "SC")
+
+dataframe = mutate(x, regiao = "NA")
+dataframe$sgUF = as.character(dataframe$sgUF)
+
+for (row in 1:nrow(dataframe)) {
+  if(dataframe$sgUF[row] %in% nordeste){
+    dataframe$regiao[row] = "Nordeste"
+  }
+  else if(dataframe$sgUF[row] %in% norte){
+    dataframe$regiao[row] = "Norte"
+  }
+  else if(dataframe$sgUF[row] %in% centroeste){
+    dataframe$regiao[row] = "Centro-Oeste"
+  }  
+  else if(dataframe$sgUF[row] %in% sudeste){
+    dataframe$regiao[row] = "Sudeste"
+  }
+  else if(dataframe$sgUF[row] %in% sul){
+    dataframe$regiao[row] = "Sul"
+  }
+  
+}
+
+```
+
