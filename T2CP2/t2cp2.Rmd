@@ -10,6 +10,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r}
 library(dplyr, warn.conflicts = FALSE)
 library(ggplot2)
+library(ggrepel)
 source('leitor.R')
 theme_set(theme_bw())
 ```
@@ -76,6 +77,23 @@ for (row in 1:nrow(dataframe)) {
   }
   
 }
+dataframe = na.omit(dataframe)
+
+commax = c(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69)
+commay = c(0, 0.5, 1, 1.5, 2, 3, 4, 5, 6, 7, 8, 9, 10)
+
+cbbPalette <- c("#000000", "#E69F00", "#56B4E9", "#009E73", "#CC79A7", "#999999")
+
+ggplot(dataframe, aes(x = depPorEstado, y = gastoEstado/1000000, color = regiao, label = sgUF)) +
+    geom_point() +
+    geom_text_repel() +
+    scale_y_continuous(breaks = commay, labels = commay) +
+    scale_color_manual(values = cbbPalette) +
+    labs(x = "Quantidade de Deputados",
+         y = "Gasto do estado(milhões)",
+         title = "Quantidade de deputados e gastos de cada estado",
+         color = "Região") +
+    theme_minimal() + theme(legend.position = "right")
 
 ```
 
