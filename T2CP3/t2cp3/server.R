@@ -64,28 +64,17 @@ dataframe = na.omit(dataframe)
 # Define server logic required to draw a histogram
 shinyServer(function(input, output) {
    
-  output$distPlot <- renderPlot({
+  output$trendPlot <- renderPlotly({
     
-    # generate bins based on input$bins from ui.R
-    x    <- faithful[, 2] 
-    bins <- seq(min(x), max(x), length.out = input$bins + 1)
-    
-    # draw the histogram with the specified number of bins
-    hist(x, breaks = bins, col = 'darkgray', border = 'white')
-    
+    # a simple histogram of movie ratings
+    p <- plot_ly(dataframe, x = depPorEstado, y = gastoEstado, text = paste("Estado: ", sgUF), name = "nome",
+                 mode = "markers", group = regiao)
+    # style the xaxis
+    layout(
+      title = "Gráfico da relação: Quantidade de deputados x Gastos",
+      xaxis = list(title = "Quantidade de deputados"),
+      yaxis = list(title = "Gasto em milhões de reais"),
+      margin = list(l = 65)
+    )
   })
-  
-  output$gastosPlot <- renderPlot({
-    plot_ly(dataframe, x = depPorEstado, y = gastoEstado, name = "ASDASD",
-                 mode = "markers", group = regiao) %>%
-      
-      
-      layout(
-        title = "Titulo",
-        xaxis = list(title = "Annual Salary (in thousands)"),
-        margin = list(l = 65)
-      )
-    
-  })
-  
 })

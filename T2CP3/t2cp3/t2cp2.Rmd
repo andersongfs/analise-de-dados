@@ -107,8 +107,6 @@ plot(myPlot)
 Com a visualização podemos notar um crescimento contínuo dos gastos conforme aumenta a quantidade de deputados, seguindo uma linha em comum de crescimento. Portanto, os estados que mais possuem deputados são os que mais gastam. Além disso vemos uma forte concentração perto do ponto (0, 0), o que nos faz concluir que muitos estados possuem um número parecido de representantes. E, por fim, notamos uma concentração dos pontos azuis e pretos, indicando que os estados das regiões Norte e Centro-Oeste possuem valores aproximados de quantidade de deputados e de gasto total.
 
 ```{r}
-s <- read.csv("https://raw.githubusercontent.com/plotly/datasets/master/school_earnings.csv")
-s <- s[order(s$Men), ]
 library(plotly)
 p <- plot_ly(dataframe, x = depPorEstado, y = gastoEstado, name = "ASDASD",
              mode = "markers", group = regiao) %>%
