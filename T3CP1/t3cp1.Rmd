@@ -11,16 +11,46 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r}
 library(dplyr, warn.conflicts = FALSE)
 library(ggplot2)
+library(plotly)
 theme_set(theme_bw())
 ```
 
 ```{r}
 emendasArea = read.csv(file = "emendas_area_parlamentar.csv", stringsAsFactors = TRUE)
 emendasDetalhes = read.csv(file = "emendas_detalhes_parlamentar.csv", stringsAsFactors = TRUE)
+```
+##Dados
+Iremos utilizar os dados apenas da Paraíba, isso para facilitar a visualização e com o intuito de enxergar melhor como são distribuídas as emendas em nosso estado.
+Trabalharemos daqui em diante com os valores: nome do parlamentar, valor do repasse, valor da contrapartida, funcao para qual o dinheiro foi destinado e o nome do município.
+
+```{r}
 emendasFiltradas = emendasDetalhes %>%
-  select(NOME_PARLAMENTAR, VL_REPASSE_PROP, VL_CONTRAPARTIDA_PROP, funcao.imputada, UF_PROPONENTE)
+  select(NOME_PARLAMENTAR, VL_REPASSE_PROP, VL_CONTRAPARTIDA_PROP, funcao.imputada, UF_PROPONENTE, MUNIC_PROPONENTE) %>%
   filter(UF_PROPONENTE == "PB")
   
 emendasFiltradas = na.omit(emendasFiltradas)
-
 ```
+Com o resumo dos valores repassados para os municípios podemos notar que exite uma grande diferença entre o valor mínimo encontrado(49990) e o máximo(3150000), podendo esse máximo ser um outlier pela grande diferença também entre ele e o terceiro quartil(487500).
+
+```{r}
+summary(emendasFiltradas$VL_REPASSE_PROP)
+```
+
+Com o agrupamento poderemos ver melhor esses valores, então vamos lá!
+Dividiremos em 4 grupos, por ser um valor que achei bom testando via tentativa e erro. 
+```{r}
+set.seed(5)
+emendasCluster <- kmeans(emendasFiltradas[, 2:3], 4, nstart = 5)
+emendasCluster$cluster <- as.factor(emendasCluster$cluster)
+
+myPlot <- plot_ly(emendasFiltradas, x = VL_REPASSE_PROP, y = VL_CONTRAPARTIDA_PROP, text = paste("Parlamentar: ", NOME_PARLAMENTAR, "\nMunicípio: ", MUNIC_PROPONENTE, "Repasse: ", VL_REPASSE_PROP, "Contrapartida: ", VL_CONTRAPARTIDA_PROP), name = "nome", mode = "markers", group = emendasCluster$cluster) %>%
+  layout(
+      title = "Agrupamento das emedas pelos valores de repasse e contrapartida",
+      xaxis = list(title = "Valor de Repasse"),
+      yaxis = list(title = "Valor de Contrapartida"),
+      margin = list(l = 65)
+    )
+
+myPlot 
+```
+
