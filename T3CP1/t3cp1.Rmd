@@ -29,6 +29,7 @@ emendasFiltradas = emendasDetalhes %>%
   filter(UF_PROPONENTE == "PB")
   
 emendasFiltradas = na.omit(emendasFiltradas)
+emendasFiltradas <- scale(emendasFiltradas)
 ```
 Com o resumo dos valores repassados para os municípios podemos notar que exite uma grande diferença entre o valor mínimo encontrado(49990) e o máximo(3150000), podendo esse máximo ser um outlier pela grande diferença também entre ele e o terceiro quartil(487500).
 
@@ -36,14 +37,15 @@ Com o resumo dos valores repassados para os municípios podemos notar que exite 
 summary(emendasFiltradas$VL_REPASSE_PROP)
 ```
 
-Com o agrupamento poderemos ver melhor esses valores, então vamos lá!
-Dividiremos em 4 grupos, por ser um valor que achei bom testando via tentativa e erro. 
+<p>Para dar uma visão diferente dos dados, será feito o agrupamento dos mesmos utilizando o método K-means clustering, por ele ser robusto, muito utilizado pela comunidade e escalável. </p>
+<p>Como parâmetros do agrupamento serão utilizadas as colunas de valor de repasse e valor de contrapartida, já que são colunas numéricas e que podem nos dar noção dos conjuntos de municípios que receberam maiores repasses, tiveram valoress de contrapartida elevados ou que estão na média.</p>
+<p>Baseado em tentantivas de agrupamento realizadas, usaremos a divisão em 5 clusters, pois foi um dos valores que apresentou melhor resultado na divisão.</p>
 ```{r}
-set.seed(5)
-emendasCluster <- kmeans(emendasFiltradas[, 2:3], 4, nstart = 5)
+set.seed(25)
+emendasCluster <- kmeans(scale(emendasFiltradas[, 2:3]), 5, nstart = 525)
 emendasCluster$cluster <- as.factor(emendasCluster$cluster)
 
-myPlot <- plot_ly(emendasFiltradas, x = VL_REPASSE_PROP, y = VL_CONTRAPARTIDA_PROP, text = paste("Parlamentar: ", NOME_PARLAMENTAR, "\nMunicípio: ", MUNIC_PROPONENTE, "Repasse: ", VL_REPASSE_PROP, "Contrapartida: ", VL_CONTRAPARTIDA_PROP), name = "nome", mode = "markers", group = emendasCluster$cluster) %>%
+myPlot <- plot_ly(emendasFiltradas, x = VL_REPASSE_PROP, y = VL_CONTRAPARTIDA_PROP, text = paste("Parlamentar: ", NOME_PARLAMENTAR, "Município: ", MUNIC_PROPONENTE, "Repasse: ", VL_REPASSE_PROP, "Contrapartida: ", VL_CONTRAPARTIDA_PROP), name = "nome", mode = "markers", group = emendasCluster$cluster) %>%
   layout(
       title = "Agrupamento das emedas pelos valores de repasse e contrapartida",
       xaxis = list(title = "Valor de Repasse"),
@@ -53,4 +55,6 @@ myPlot <- plot_ly(emendasFiltradas, x = VL_REPASSE_PROP, y = VL_CONTRAPARTIDA_PR
 
 myPlot 
 ```
+<p>Feito o agrupamento, podemos notar um grupo bem distindo dos outros que é o 5, com alto valor de contrapartida, outro com valor médios em ambos os eixos(grupo 2), grupos 1 e 4 que poderiam ser um só indicando um valor de repasse relativamente pequeno e o grupo 3 que poderia ser dividido em dois, separando os repasses acima de 2.5 Milhões de reais em outro grupo.</p>
+<p>Enfim, pode-se dizer que obtivemos um resultado razoávelmente bom. Isso principalmente pelo fato de que não foi criado um cluster para os pontos com valor de repasse próximo dos 3 Milhões de reais. Mas, os dados também se apresentam na maioria com valores de contrapartida bem próximos, impossibilitando a criação dos grupos mais isolados uns dos outros.<p>
 
