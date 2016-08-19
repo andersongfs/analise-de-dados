@@ -11,12 +11,16 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r}
 library(dplyr, warn.conflicts = FALSE)
 library(ggplot2)
-source('leitor.R')
 theme_set(theme_bw())
 ```
 
 ```{r}
-emendasArea = read.csv(file = "emendas_area_parlamentar.csv")
-emendasDetalhes = read.csv(file = "emendas_detalhes_parlamentar.csv")
+emendasArea = read.csv(file = "emendas_area_parlamentar.csv", stringsAsFactors = TRUE)
+emendasDetalhes = read.csv(file = "emendas_detalhes_parlamentar.csv", stringsAsFactors = TRUE)
+emendasFiltradas = emendasDetalhes %>%
+  select(NOME_PARLAMENTAR, VL_REPASSE_PROP, VL_CONTRAPARTIDA_PROP, funcao.imputada, UF_PROPONENTE)
+  filter(UF_PROPONENTE == "PB")
+  
+emendasFiltradas = na.omit(emendasFiltradas)
 
 ```
