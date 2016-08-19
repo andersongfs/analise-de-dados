@@ -1,6 +1,6 @@
 ---
 title: "t3cp1"
-author: "Anderson Gustafson"
+author: ""
 date: "15 de agosto de 2016"
 output: html_document
 ---
@@ -8,19 +8,64 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
-```{r}
+```{r echo=FALSE, results='hide', warning=FALSE, message=FALSE}
 library(dplyr, warn.conflicts = FALSE)
 library(ggplot2)
 library(plotly)
 theme_set(theme_bw())
 ```
 
-```{r}
+```{r echo=FALSE}
 emendasArea = read.csv(file = "emendas_area_parlamentar.csv", stringsAsFactors = TRUE)
 emendasDetalhes = read.csv(file = "emendas_detalhes_parlamentar.csv", stringsAsFactors = TRUE)
 ```
-##Dados
-Iremos utilizar os dados apenas da Paraíba, isso para facilitar a visualização e com o intuito de enxergar melhor como são distribuídas as emendas em nosso estado.
+#Dados gerais
+<p>Para termos uma noção geral dos dados, vamos apenas ver quantas propostas de emenda são feitas por ano no Brasil, excluíndo o ano de 2016 já que ainda não temos todo o conjunto de dados desse ano.<p>
+```{r}
+qtdDeEmendasAnual = emendasDetalhes %>%
+  select(ANO_PROP, VL_REPASSE_PROP) %>%
+  filter(ANO_PROP != 2016) %>%
+  group_by(ANO_PROP) %>%
+  summarise(qtdAnual = n())
+
+ggplot(qtdDeEmendasAnual) +
+  geom_bar(stat="identity", mapping = aes(x = ANO_PROP,
+                         y = qtdAnual)) + 
+    labs(x='Ano', y='Quantidade de propostas')
+```
+<p>É notável uma queda significativa da quantidade de propostas feitas a cada ano. Então será que o governo está gastando cada vez menos dinheiro com emendas parlamentares? Vamos ver o gráfico com a média dos valores repassados para os municípios nos anos de 2013, 2014 e 2015 para descobrir.<p>
+
+```{r}
+somaDeRepasseAnual = emendasDetalhes %>%
+  select(ANO_PROP, VL_REPASSE_PROP) %>%
+  filter(ANO_PROP != 2016) %>%
+  group_by(ANO_PROP) %>%
+  summarise(somaAnual = sum(VL_REPASSE_PROP))
+
+ggplot(somaDeRepasseAnual) +
+  geom_bar(stat="identity", mapping = aes(x = ANO_PROP,
+                         y = somaAnual/1000000)) + 
+    labs(x='Ano', y='Soma dos repasses (em milhões de reais)')
+```
+<p>Realmente! A soma total dos repasses vem caindo desde 2013.<p>
+<p>Por curiosidade, vamos ver como é a média do valor dos repasses nesses mesmos anos.<p>
+
+```{r}
+mediaDeRepasseAnual = emendasDetalhes %>%
+  select(ANO_PROP, VL_REPASSE_PROP) %>%
+  filter(ANO_PROP != 2016) %>%
+  group_by(ANO_PROP) %>%
+  summarise(mediaAnual = mean(VL_REPASSE_PROP))
+
+ggplot(mediaDeRepasseAnual) +
+  geom_bar(stat="identity", mapping = aes(x = ANO_PROP,
+                         y = mediaAnual/1000)) + 
+    labs(x='Ano', y='Valor médio de repasse (em milhares de reais)')
+```
+<p> O valor médio dos repasses não sofreu tanta mudança como a soma dos valores. Os 3 anos tem valores próximos.<p>
+
+##Dados PB
+Agora vamos nos concentrar mais nos dados apenas da Paraíba, isso para facilitar a visualização e para enxergar melhor como são distribuídas as emendas em nosso estado.
 Trabalharemos daqui em diante com os valores: nome do parlamentar, valor do repasse, valor da contrapartida, funcao para qual o dinheiro foi destinado e o nome do município.
 
 ```{r}
@@ -29,7 +74,6 @@ emendasFiltradas = emendasDetalhes %>%
   filter(UF_PROPONENTE == "PB")
   
 emendasFiltradas = na.omit(emendasFiltradas)
-emendasFiltradas <- scale(emendasFiltradas)
 ```
 Com o resumo dos valores repassados para os municípios podemos notar que exite uma grande diferença entre o valor mínimo encontrado(49990) e o máximo(3150000), podendo esse máximo ser um outlier pela grande diferença também entre ele e o terceiro quartil(487500).
 
@@ -45,7 +89,7 @@ set.seed(25)
 emendasCluster <- kmeans(scale(emendasFiltradas[, 2:3]), 5, nstart = 525)
 emendasCluster$cluster <- as.factor(emendasCluster$cluster)
 
-myPlot <- plot_ly(emendasFiltradas, x = VL_REPASSE_PROP, y = VL_CONTRAPARTIDA_PROP, text = paste("Parlamentar: ", NOME_PARLAMENTAR, "Município: ", MUNIC_PROPONENTE, "Repasse: ", VL_REPASSE_PROP, "Contrapartida: ", VL_CONTRAPARTIDA_PROP), name = "nome", mode = "markers", group = emendasCluster$cluster) %>%
+myPlot <- plot_ly(emendasFiltradas, x = VL_REPASSE_PROP, y = VL_CONTRAPARTIDA_PROP, text = paste("Parlamentar: ", NOME_PARLAMENTAR, "Município: ", MUNIC_PROPONENTE), name = "nome", mode = "markers", group = emendasCluster$cluster) %>%
   layout(
       title = "Agrupamento das emedas pelos valores de repasse e contrapartida",
       xaxis = list(title = "Valor de Repasse"),
