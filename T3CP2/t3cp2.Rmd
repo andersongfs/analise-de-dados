@@ -1,0 +1,103 @@
+---
+title: "t3cp2"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+```{r echo=FALSE, results='hide', warning=FALSE, message=FALSE}
+require(ggplot2, quietly = TRUE)
+library(ggfortify, quietly = TRUE)
+# http://rpubs.com/sinhrks/basics
+require(GGally, quietly = TRUE)
+require(reshape2, quietly = TRUE)
+require(dplyr, quietly = TRUE)
+library(knitr, quietly = TRUE)
+library(cluster)
+library(ggdendro)
+library(plotly)
+theme_set(theme_bw())
+```
+
+```{r echo=FALSE}
+emendasArea = read.csv(file = "emendas_area_parlamentar.csv", stringsAsFactors = TRUE)
+emendasDetalhes = read.csv(file = "emendas_detalhes_parlamentar.csv", stringsAsFactors = TRUE)
+```
+
+```{r}
+emendasPB13 = emendasDetalhes %>%
+  select(NOME_PARLAMENTAR, ANO_PROP, VL_REPASSE_PROP, UF_PROPONENTE) %>%
+  filter(UF_PROPONENTE == "PB", ANO_PROP == 2013) %>%
+  group_by(NOME_PARLAMENTAR) %>%
+  summarise(soma13 = sum(VL_REPASSE_PROP))
+
+emendasPB14 = emendasDetalhes %>%
+  select(NOME_PARLAMENTAR, ANO_PROP, VL_REPASSE_PROP, UF_PROPONENTE) %>%
+  filter(UF_PROPONENTE == "PB", ANO_PROP == 2014) %>%
+  group_by(NOME_PARLAMENTAR) %>%
+  summarise(soma14 = sum(VL_REPASSE_PROP))
+
+emendasPB15 = emendasDetalhes %>%
+  select(NOME_PARLAMENTAR, ANO_PROP, VL_REPASSE_PROP, UF_PROPONENTE) %>%
+  filter(UF_PROPONENTE == "PB", ANO_PROP == 2015) %>%
+  group_by(NOME_PARLAMENTAR) %>%
+  summarise(soma15 = sum(VL_REPASSE_PROP))
+  
+emendasPB13 = na.omit(emendasPB13)
+emendasPB14 = na.omit(emendasPB14)
+emendasPB15 = na.omit(emendasPB15)
+
+merge1 = merge(emendasPB13, emendasPB14)
+dataframe = merge(merge1, emendasPB15)
+```
+
+
+## PCA
+
+```{r}
+row.names(dataframe) = dataframe$NOME_PARLAMENTAR
+# scale()
+pr.out = prcomp(select(dataframe, -NOME_PARLAMENTAR), scale = TRUE) 
+
+kable(pr.out$rotation)
+biplot(pr.out, scale = 0)
+
+autoplot(pr.out, label = TRUE, label.size = 3, shape = FALSE)
+
+autoplot(pr.out, label = TRUE, label.size = 3, shape = FALSE, 
+         loadings = TRUE, loadings.colour = 'blue',
+         loadings.label = TRUE, loadings.label.size = 3)
+
+# Porcentagem da variância explicada: 
+plot_pve <- function(prout){
+  pr.var <- pr.out$sdev^2
+  pve <- pr.var / sum(pr.var)
+  df = data.frame(x = 1:NROW(pve), y = cumsum(pve))
+  ggplot(df, aes(x = x, y = y)) + 
+    geom_point(size = 3) + 
+    geom_line() + 
+    labs(x='Principal Component', y = 'Cumulative Proportion of Variance Explained')
+}
+
+plot_pve(pr.out)
+```
+
+## t-SNE
+
+```{r}
+require(Rtsne)
+tsne.out = Rtsne(select(dataframe, -NOME_PARLAMENTAR), 
+                 verbose = TRUE)
+
+df = as.data.frame(tsne.out$Y)
+df$NOME_PARLAMENTAR = dataframe$NOME_PARLAMENTAR
+
+ggplot(df, aes(x = V1, y = V2, label = NOME_PARLAMENTAR)) + 
+  geom_point(alpha = 0.8, size = 3, color = "tomato") 
+
+ggplot(df, aes(x = V1, y = V2, label = NOME_PARLAMENTAR)) + 
+  geom_point(alpha = 0.2, size = 3, color = "tomato") + 
+  geom_text(alpha = .7, size = 4, hjust = -.2)
+
+```
