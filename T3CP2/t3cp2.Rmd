@@ -17,6 +17,7 @@ library(knitr, quietly = TRUE)
 library(cluster)
 library(ggdendro)
 library(plotly)
+library(Rtsne)
 theme_set(theme_bw())
 ```
 
@@ -24,41 +25,22 @@ theme_set(theme_bw())
 emendasArea = read.csv(file = "emendas_area_parlamentar.csv", stringsAsFactors = TRUE)
 emendasDetalhes = read.csv(file = "emendas_detalhes_parlamentar.csv", stringsAsFactors = TRUE)
 ```
-
+# Dados
+<p>Os dados escolhidos para a tarefa é um subconjunto do arquivo emendas_area_parlamentar.csv, selecionando deste arquivos apenas as áreas: agricultura, defesa nacional e cultura. Essas três áreas foram escolhidas porque, provavelmente, são áreas mais distintas uma das outras, ao invés de saneamento e urbanismo, onde creio que são áreas mais correlacionadas. Sendo assim, espero os grupos formados sejam bem definidos e os eixos criados pelo PCA não sejam tão próximos, para facilitar visualização.<p>
 ```{r}
-emendasPB13 = emendasDetalhes %>%
-  select(NOME_PARLAMENTAR, ANO_PROP, VL_REPASSE_PROP, UF_PROPONENTE) %>%
-  filter(UF_PROPONENTE == "PB", ANO_PROP == 2013) %>%
-  group_by(NOME_PARLAMENTAR) %>%
-  summarise(soma13 = sum(VL_REPASSE_PROP))
+dataframe = emendasArea %>%
+  select(NOME_PARLAMENTAR, Agricultura, Defesa.Nacional, Cultura)
 
-emendasPB14 = emendasDetalhes %>%
-  select(NOME_PARLAMENTAR, ANO_PROP, VL_REPASSE_PROP, UF_PROPONENTE) %>%
-  filter(UF_PROPONENTE == "PB", ANO_PROP == 2014) %>%
-  group_by(NOME_PARLAMENTAR) %>%
-  summarise(soma14 = sum(VL_REPASSE_PROP))
+dataframe = na.omit(dataframe)
 
-emendasPB15 = emendasDetalhes %>%
-  select(NOME_PARLAMENTAR, ANO_PROP, VL_REPASSE_PROP, UF_PROPONENTE) %>%
-  filter(UF_PROPONENTE == "PB", ANO_PROP == 2015) %>%
-  group_by(NOME_PARLAMENTAR) %>%
-  summarise(soma15 = sum(VL_REPASSE_PROP))
-  
-emendasPB13 = na.omit(emendasPB13)
-emendasPB14 = na.omit(emendasPB14)
-emendasPB15 = na.omit(emendasPB15)
-
-merge1 = merge(emendasPB13, emendasPB14)
-dataframe = merge(merge1, emendasPB15)
 ```
 
-
-## PCA
+# PCA
 
 ```{r}
 row.names(dataframe) = dataframe$NOME_PARLAMENTAR
 # scale()
-pr.out = prcomp(select(dataframe, -NOME_PARLAMENTAR), scale = TRUE) 
+pr.out = prcomp(log(select(dataframe, -NOME_PARLAMENTAR) + 1), scale = TRUE) 
 
 kable(pr.out$rotation)
 biplot(pr.out, scale = 0)
@@ -69,7 +51,14 @@ autoplot(pr.out, label = TRUE, label.size = 3, shape = FALSE,
          loadings = TRUE, loadings.colour = 'blue',
          loadings.label = TRUE, loadings.label.size = 3)
 
+```
+<p>Utilizando o PCA, é possível observar que os eixos de agricultura e cultura andam bem próximos, nos indicando que a nuvem de deputados localizada entre esses dois eixos tiveram suas emendas focadas nessas duas áreas e quase sem atuação com relação a defesa nacional.<p>
+<p> Mais na parte inferior do gráfico existe a formação de nuvens bem distintas das outras com atuação mais forte em defesa nacional e alguns poucos no grupo de Vanessa Grazziotin com ligação mais forte em relação aos eixos de agricultura e cultura.<p>
+<p>Outros ficaram bem afastados, indicando que atuam em outras áreas.<p>
+
 # Porcentagem da variância explicada: 
+```{r}
+
 plot_pve <- function(prout){
   pr.var <- pr.out$sdev^2
   pve <- pr.var / sum(pr.var)
@@ -82,22 +71,30 @@ plot_pve <- function(prout){
 
 plot_pve(pr.out)
 ```
+<p>Com esse gráfico podemos saber o quanto que estamos perdendo reduzindo de três variáveis ou fatores para dois. Como mostrado na figura, usando duas variáveis conseguimos explicar algo próximo de 80% da variância total obtida apenas quando se usa todo o conjunto de variáveis.<p>
 
-## t-SNE
+# t-SNE
 
 ```{r}
-require(Rtsne)
-tsne.out = Rtsne(select(dataframe, -NOME_PARLAMENTAR), 
-                 verbose = TRUE)
+
+tsne.out = Rtsne(log(select(dataframe, -NOME_PARLAMENTAR) + 1), 
+                 verbose = TRUE, check_duplicates=FALSE)
 
 df = as.data.frame(tsne.out$Y)
 df$NOME_PARLAMENTAR = dataframe$NOME_PARLAMENTAR
 
-ggplot(df, aes(x = V1, y = V2, label = NOME_PARLAMENTAR)) + 
-  geom_point(alpha = 0.8, size = 3, color = "tomato") 
+myPlot <- plot_ly(df, x = V1, y = V2, text = paste("Parlamentar: ", NOME_PARLAMENTAR), name = "nome", mode = "markers") %>%
+  layout(
+      title = "t-SNE",
+      xaxis = list(title = "V1"),
+      yaxis = list(title = "V2"),
+      margin = list(l = 65)
+    )
 
-ggplot(df, aes(x = V1, y = V2, label = NOME_PARLAMENTAR)) + 
-  geom_point(alpha = 0.2, size = 3, color = "tomato") + 
-  geom_text(alpha = .7, size = 4, hjust = -.2)
-
+myPlot 
 ```
+<p>Já sobre a visualização do t-SNE, observamos grupos mais bem formados e distintos entre si. Com isso é mais fácil notar parlamentares com emendas em áreas semelhantes e proximidades entre grupos. Nesse grupo de dados tivemos quatro grupos bem separados ficando em direções opostas e apenas um grupo com distância menor em relação aos outros.<p> 
+
+# Conclusão
+<p> Para esse caso, com esse conjunto de dados, utilizando o PCA foi mais fácil de entender a quais áreas cada ponto está relacionado, visulizar pontos que abrangem mais de uma área de atuação, como também pontos que não se encaixam com as áreas escolhidas, ficando localizados em extremos contrários às direções dos vetores. Já o t-SNE, facilitou a distinção de grupos, formando aglomerações bem definidas. A partir desses grupos gerados pelo t-SNE podemos fazer uma análise mais detalhada de cada grupo, vendo quais deputados fazem parte, se pertencem ao mesmo estado ou então se as áreas das emendas desse grupo realmente tem ligação.<p>
+<p>Portanto, dependendo do que se queira extrair do conjunto de dados que podemos dizer qual ferramenta será mais apropriada.<p>
