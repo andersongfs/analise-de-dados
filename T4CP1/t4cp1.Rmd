@@ -1,0 +1,57 @@
+---
+title: "t4cp1"
+output: html_document
+---
+
+```{r setup, include=FALSE, echo=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+require(dplyr, warn.conflicts = FALSE)
+require(ggplot2, warn.conflicts = FALSE)
+require(resample)
+```
+
+
+## Dados 
+
+```{r echo=FALSE}
+  ratings = read.csv("ml-latest-small/ratings.csv")
+  movies = read.csv("ml-latest-small/movies.csv")
+  data = merge(movies, ratings)
+  
+  godfather.ids <- c("858", "1221", "2023")
+  data.filtered = data %>%
+    filter(movieId %in% godfather.ids)
+  
+```
+
+### Qual filme há melhor avaliação?
+
+```{r echo=FALSE}
+  gf1 = data.filtered %>% filter(movieId == 858)
+  gf2 = data.filtered %>% filter(movieId == 1221)
+  gf3 = data.filtered %>% filter(movieId == 2023)  
+  
+  gf1.boot = bootstrap(gf1, mean(rating), R = 10000)
+  gf1.limits = CI.bca(gf1.boot, probs = c(0.025, .975))
+  row.names(gf1.limits) = c("Godfather, The (1972)")
+  
+  gf2.boot = bootstrap(gf2, mean(rating), R = 10000)
+  gf2.limits = CI.bca(gf2.boot, probs = c(.025, .975))
+  row.names(gf2.limits) = c("Godfather: Part II, The (1974)")
+
+  gf3.boot = bootstrap(gf3, mean(rating), R = 10000)
+  gf3.limits = CI.bca(gf3.boot, probs = c(.025, .975))
+  row.names(gf3.limits) = c("Godfather: Part III, The (1990)")
+  
+  df = data.frame(rbind(gf1.limits,
+                        gf2.limits,
+                        gf3.limits))
+  
+  df$movie = row.names(df)
+  
+  
+  # range of rating to 95% confidence interval
+  df %>% 
+  ggplot(aes(x = movie, ymin = X2.5., ymax = X97.5.)) + 
+  geom_errorbar(width = .2)
+```
