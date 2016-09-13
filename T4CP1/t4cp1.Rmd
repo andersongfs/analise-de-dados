@@ -55,3 +55,32 @@ require(resample)
   ggplot(aes(x = movie, ymin = X2.5., ymax = X97.5.)) + 
   geom_errorbar(width = .2)
 ```
+
+### Qual filme tem maior variação nas notas atribuídas?
+
+```{r echo=FALSE}
+  
+  gf1.sd = bootstrap(gf1, sd(rating), R = 10000)
+  gf1.limits = CI.bca(gf1.sd, probs = c(0.025, .975))
+  row.names(gf1.limits) = c("Godfather, The (1972)")
+  
+  gf2.sd = bootstrap(gf2, sd(rating), R = 10000)
+  gf2.limits = CI.bca(gf2.sd, probs = c(.025, .975))
+  row.names(gf2.limits) = c("Godfather: Part II, The (1974)")
+
+  gf3.sd = bootstrap(gf3, sd(rating), R = 10000)
+  gf3.limits = CI.bca(gf3.sd, probs = c(.025, .975))
+  row.names(gf3.limits) = c("Godfather: Part III, The (1990)")
+  
+  df = data.frame(rbind(gf1.limits,
+                        gf2.limits,
+                        gf3.limits))
+  
+  df$movie = row.names(df)
+  
+  
+  # range of standard desviation to 95% confidence interval
+  df %>% 
+  ggplot(aes(x = movie, ymin = X2.5., ymax = X97.5.)) + 
+  geom_errorbar(width = .2)
+```
