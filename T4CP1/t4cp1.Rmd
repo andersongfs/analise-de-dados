@@ -8,12 +8,15 @@ knitr::opts_chunk$set(echo = TRUE)
 require(dplyr, warn.conflicts = FALSE)
 require(ggplot2, warn.conflicts = FALSE)
 require(resample)
+require(stringr)
 ```
 
 
 ## Dados 
-
-```{r echo=FALSE}
+<p>Os dados utilizados para esta análise representam avaliações de usuários para diversos filmes. As avaliações recebem notas que vão de 0 a 5, sendo 5 a melhor nota.<p>
+<p>Para esta tarefa utilizaremos as opniões dedicadas à trilogia O poderoso chefão(The Godfather).<p>
+<p>Para maiores informações basta acessar o [link](http://grouplens.org/datasets/movielens/latest/) do dataset.<p>
+```{r}
   ratings = read.csv("ml-latest-small/ratings.csv")
   movies = read.csv("ml-latest-small/movies.csv")
   data = merge(movies, ratings)
@@ -26,7 +29,7 @@ require(resample)
 
 ### Qual filme há melhor avaliação?
 
-```{r echo=FALSE}
+```{r}
   gf1 = data.filtered %>% filter(movieId == 858)
   gf2 = data.filtered %>% filter(movieId == 1221)
   gf3 = data.filtered %>% filter(movieId == 2023)  
@@ -49,16 +52,15 @@ require(resample)
   
   df$movie = row.names(df)
   
-  
-  # range of rating to 95% confidence interval
   df %>% 
   ggplot(aes(x = movie, ymin = X2.5., ymax = X97.5.)) + 
   geom_errorbar(width = .2)
 ```
+<p>Após aplicar a técnica de bootstrap na nossa amostra, podemos dizer, baseado no gráfico acima, que o filme <i>The Godfather: Part III</i> obteve pior avaliação quando comparado aos dois episódios anteriores. Quando aos episódios <i>The Godfather: Part I</i> e <i>The Godfather: Part II</i> não podemos afirmar qual teve melhor avaliação, pelo fato que que o valor médio das avaliações desses dois se encontram em intervalos que se interseccionam.<p>
 
 ### Qual filme tem maior variação nas notas atribuídas?
 
-```{r echo=FALSE}
+```{r}
   
   gf1.sd = bootstrap(gf1, sd(rating), R = 10000)
   gf1.limits = CI.bca(gf1.sd, probs = c(0.025, .975))
@@ -78,9 +80,78 @@ require(resample)
   
   df$movie = row.names(df)
   
-  
-  # range of standard desviation to 95% confidence interval
   df %>% 
   ggplot(aes(x = movie, ymin = X2.5., ymax = X97.5.)) + 
   geom_errorbar(width = .2)
 ```
+<p>Utilizando o desvio padrão das notas dos três episódios, não podemos concluir qual filme tem maior variação, pois os intervalos de confiança para o desvio padrão das notas de cada um deles se interseccionam entre si.<p>
+
+## Quantidade de gêneros influencia a classificação?
+<p>Criaremos uma nova coluna para cada entrada para indicar a quantos gêrenos cada título abrange.<p>
+```{r}
+sum_genres = mutate(data, total_genres = str_count(data$genres, "\\|") + 1)
+summary(sum_genres$total_genres)
+distincts = sum_genres %>%
+  select(total_genres) %>%
+  distinct()
+show(distincts)
+```
+<p>Observando os valores da nova coluna, temos que a quantidade de gêneros para um só título varia de 1 a 10, não possuindo nenhum título com 9 gêneros.<p>
+<p>Agora vamos aplicar mais uma vez a técnica de bootstrap a fim de calcular a mediana das avaliações para cada quantidade possível de gêneros simultâneos para um mesmo título.<p>
+```{r}
+  rvalue = 1000
+  ic = c(0.025, .975)
+  genres1.boot = bootstrap(filter(sum_genres, total_genres == 1), median(rating), R = rvalue)
+  genres1.limits = CI.percentile(genres1.boot, probs = ic)
+  row.names(genres1.limits) = c("Um gênero")
+  
+  genres2.boot = bootstrap(filter(sum_genres, total_genres == 2), median(rating), R = rvalue)
+  genres2.limits = CI.percentile(genres2.boot, probs = c(0.025, .975))
+  row.names(genres2.limits) = c("Dois gêneros")
+  
+  genres3.boot = bootstrap(filter(sum_genres, total_genres == 3), median(rating), R = rvalue)
+  genres3.limits = CI.percentile(genres3.boot, probs = c(0.025, .975))
+  row.names(genres3.limits) = c("Três gêneros")
+  
+  genres4.boot = bootstrap(filter(sum_genres, total_genres == 4), median(rating), R = rvalue)
+  genres4.limits = CI.percentile(genres4.boot, probs = c(0.025, .975))
+  row.names(genres4.limits) = c("Quatro gêneros")
+  
+  genres5.boot = bootstrap(filter(sum_genres, total_genres == 5), median(rating), R = rvalue)
+  genres5.limits = CI.percentile(genres5.boot, probs = c(0.025, .975))
+  row.names(genres5.limits) = c("Cinco gêneros")
+  
+  genres6.boot = bootstrap(filter(sum_genres, total_genres == 6), median(rating), R = rvalue)
+  genres6.limits = CI.percentile(genres6.boot, probs = c(0.025, .975))
+  row.names(genres6.limits) = c("Seis gêneros")
+  
+  genres7.boot = bootstrap(filter(sum_genres, total_genres == 7), median(rating), R = rvalue)
+  genres7.limits = CI.percentile(genres7.boot, probs = c(0.025, .975))
+  row.names(genres7.limits) = c("Sete gêneros")
+  
+  genres8.boot = bootstrap(filter(sum_genres, total_genres == 8), median(rating), R = rvalue)
+  genres8.limits = CI.percentile(genres8.boot, probs = c(0.025, .975))
+  row.names(genres8.limits) = c("Oito gêneros")
+  
+  genres10.boot = bootstrap(filter(sum_genres, total_genres == 10), median(rating), R = rvalue)
+  genres10.limits = CI.percentile(genres10.boot, probs = c(0.025, .975))
+  row.names(genres10.limits) = c("Dez gêneros")
+  
+  df = data.frame(rbind(genres1.limits,
+                      genres2.limits,
+                      genres3.limits,
+                      genres4.limits,
+                      genres5.limits,
+                      genres6.limits,
+                      genres7.limits,
+                      genres8.limits,
+                      genres10.limits))
+
+  df$total_generos = row.names(df)
+
+  df %>% 
+  ggplot(aes(x = total_generos, ymin = X2.5., ymax = X97.5.)) + 
+  geom_errorbar(width = .2)
+  
+```
+<p>A partir do gráfico gerado vemos que os filmes que se encaixam em sete gêneros tem como mediana para notas obtidas igual a 4.0, nota melhor que os filmes com apenas um gênero os quais obtiveram como mediana para notas obtidas o valor 3.5.<p>
